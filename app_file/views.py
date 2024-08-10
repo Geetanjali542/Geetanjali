@@ -1,6 +1,17 @@
 from django.shortcuts import render, redirect
 import pandas as pd
 from .models import *
+
+import matplotlib.pyplot as plt
+from io import BytesIO
+from PIL import Image
+import numpy as np
+
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+import os
+
+
 # Create your views here.
 def model_form_upload(request):
     if request.method == 'POST':
@@ -25,6 +36,26 @@ def model_form_upload(request):
         summary = {
             'data': df_selected.head(4).to_html(index=False), #It shows the first 4 entries of the selected row from the DataFrame and to_html converts these rows to an HTML table, excluding the index column, if removes .head(4), it will show all the entries
         }
+
+
+        # Create an image of the summary table
+        fig, ax = plt.subplots()
+        ax.axis('tight')
+        ax.axis('off')
+        ax.table(cellText=df_selected.head(4).values, colLabels=df_selected.columns, cellLoc='center', loc='center')
+
+        # Save the figure as an image in memory
+        buf = BytesIO()
+        plt.savefig(buf, format='png')
+        buf.seek(0)
+
+       # Save the image using Django's default storage
+        image_path = f'summaries/summary_{fs.id}.png'
+        image_content = ContentFile(buf.getvalue())
+        fs.summary_image.save(image_path, image_content)
+        fs.save()
+
+
         return render(request, 'summary.html', {
             'summary': summary
         })    
